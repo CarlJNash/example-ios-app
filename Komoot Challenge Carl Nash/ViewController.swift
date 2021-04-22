@@ -15,7 +15,11 @@ extension CLLocationCoordinate2D {
             (lhs.longitude == rhs.longitude)
     }
 }
+
 class ViewController: UIViewController {
+    
+    @IBOutlet weak var collectionView: UICollectionView!
+    @IBOutlet weak var collectionViewFlowLayout: UICollectionViewFlowLayout!
     
     struct VisitedLocation {
         let location: CLLocation
@@ -28,6 +32,7 @@ class ViewController: UIViewController {
     
     let apiClient = APIClient()
     var visitedLocations = [VisitedLocation]()
+    var didUpdateLocations = [CLLocation]()
     
     lazy var locationManager: CLLocationManager = {
         let locationManager = CLLocationManager()
@@ -42,6 +47,9 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Start", style: .plain, target: self, action: #selector(startButtonTapped))
+        
+        collectionView.dataSource = self
+        collectionView.delegate = self
     }
     
     @objc private func startButtonTapped() {
@@ -63,6 +71,35 @@ class ViewController: UIViewController {
     
 }
 
+extension ViewController: UICollectionViewDataSource {
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        visitedLocations.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell: PhotoCollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoCollectionViewCell", for: indexPath) as? PhotoCollectionViewCell else {
+            fatalError()
+        }
+        
+        let image = visitedLocations[indexPath.item].image
+        cell.configureWith(image: image.image)
+        return cell
+    }
+    
+}
+
+extension ViewController: UICollectionViewDelegateFlowLayout {
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        let imageSize = visitedLocations[indexPath.item].image.image.size
+        let imageAspectRatio = imageSize.width / imageSize.height
+        let cellWidth = collectionView.contentSize.width
+        let newHeight = cellWidth / imageAspectRatio
+        let newSize = CGSize(width: cellWidth, height: newHeight)
+        return newSize
+    }
+}
+
 extension ViewController: CLLocationManagerDelegate {
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -80,30 +117,42 @@ extension ViewController: CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        #warning("ignore duplicate locations")
-        print(locations)
-        if let location = locations.last {
-            if visitedLocations.contains(where: { $0.location.coordinate == location.coordinate }) {
-                return
-            }
-            apiClient.searchForPhotosForLocation(lat: location.coordinate.latitude, lng: location.coordinate.longitude) { result in
-                switch result {
-                case .failure(let error):
-                    print(error)
-                case .success(let response):
-                    let firstPhoto = response.photos.photo.first!
-                    self.apiClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret) { result in
-                        switch result {
-                        case .failure(let error):
-                            print(error)
-                        case .success(let image):
-                            if self.visitedLocations.contains(where: { $0.location.coordinate == location.coordinate }) {
-                                print("Location already exists in visited locations")
-                                return
-                            }
-                            let visitedLocation = VisitedLocation(location: location, image: .init(imageId: firstPhoto.id, image: image))
-                            self.visitedLocations.insert(visitedLocation, at: 0)
-                            // TODO: reload image list
+        guard let latestLocation = locations.last, didUpdateLocations.contains(latestLocation) == false else {
+            return
+        }
+        didUpdateLocations.append(latestLocation)
+        
+        if visitedLocations.contains(where: { $0.location.coordinate == latestLocation.coordinate }) {
+            return
+        }
+        apiClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lng: latestLocation.coordinate.longitude) { result in
+            switch result {
+            case .failure(let error):
+                print(error)
+            case .success(let response):
+                // Find the first photo that isn't in the list if visitedLocations already - this may be for a location already in the list if the user has travelled back to the same location
+                guard let firstPhoto = response.photos.photo.first(where: { photo in
+                    self.visitedLocations.contains(where: { visitedLocation in
+                        photo.id == visitedLocation.image.imageId
+                    }) == false
+                }) else {
+                    print("Could not find photos for this location that aren't in the list already")
+                    return
+                }
+                // Download the photo
+                self.apiClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret) { result in
+                    switch result {
+                    case .failure(let error):
+                        print(error)
+                    case .success(let image):
+                        if self.visitedLocations.contains(where: { $0.location.coordinate == latestLocation.coordinate }) {
+                            print("Location already exists in visited locations")
+                            return
+                        }
+                        let visitedLocation = VisitedLocation(location: latestLocation, image: .init(imageId: firstPhoto.id, image: image))
+                        self.visitedLocations.insert(visitedLocation, at: 0)
+                        DispatchQueue.main.async {
+                            self.collectionView.reloadData()
                         }
                     }
                 }
@@ -126,7 +175,7 @@ struct APIClient {
     }
     
     func searchForPhotosForLocation(lat: Double, lng: Double, completion: @escaping (Result<APISearchPhotosResponse, Error>) -> Void) {
-        let urlString = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=a0881b1f9a81ce55eaa3257454f4a486&lat=\(String(lat))&lon=\(String(lng))&radius=5&per_page=1&format=json&nojsoncallback=1"
+        let urlString = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=a0881b1f9a81ce55eaa3257454f4a486&lat=\(String(lat))&lon=\(String(lng))&radius=5&per_page=50&content_type=1&tags=landscape,countryside&format=json&nojsoncallback=1"
         let url = URL(string: urlString)!
         urlSession.dataTask(with: url) { (data, urlResponse, error) in
             if let error = error {

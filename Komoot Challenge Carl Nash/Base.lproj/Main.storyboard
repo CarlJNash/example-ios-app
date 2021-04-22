@@ -9,10 +9,10 @@
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
-        <!--View Controller-->
+        <!--Photo List View Controller-->
         <scene sceneID="tne-QT-ifu">
             <objects>
-                <viewController id="BYZ-38-t0r" customClass="ViewController" customModule="Komoot_Challenge_Carl_Nash" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="BYZ-38-t0r" customClass="PhotoListViewController" customModule="Komoot_Challenge_Carl_Nash" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
                         <rect key="frame" x="0.0" y="0.0" width="414" height="896"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
@@ -64,7 +64,6 @@
                     <navigationItem key="navigationItem" id="8Jz-kW-E6I"/>
                     <connections>
                         <outlet property="collectionView" destination="0dc-LI-snv" id="vR4-P6-Fmy"/>
-                        <outlet property="collectionViewFlowLayout" destination="ZBn-By-poY" id="8t8-9W-VZp"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>

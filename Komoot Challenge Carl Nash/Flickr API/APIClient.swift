@@ -11,7 +11,7 @@ import UIKit
 struct APIClient {
     
     enum ResponseError: Error {
-        case invalidSearchData
+        case invalidPhotosSearchResponseData
         case invalidImageData
     }
     
@@ -21,16 +21,34 @@ struct APIClient {
         urlSession = URLSession(configuration: .default)
     }
     
-    func searchForPhotosForLocation(lat: Double, lng: Double, completion: @escaping (Result<APIPhotosSearchResponse, Error>) -> Void) {
-        let urlString = "https://www.flickr.com/services/rest/?method=flickr.photos.search&api_key=a0881b1f9a81ce55eaa3257454f4a486&lat=\(String(lat))&lon=\(String(lng))&radius=5&per_page=50&content_type=1&tags=landscape,countryside&radius=10&format=json&nojsoncallback=1"
-        let url = URL(string: urlString)!
-        urlSession.dataTask(with: url) { (data, urlResponse, error) in
+    /// Use this for searching for photos from the Flickr API based on GRP location
+    /// - Parameters:
+    ///   - lat: The GPS latitude value
+    ///   - lon: The GPS longitude value
+    ///   - completion: `Result` object containing a `APIPhotosSearchResponse` if successful, otherwise an `Error` on failure
+    func searchForPhotosForLocation(lat: Double, lon: Double, completion: @escaping (Result<APIPhotosSearchResponse, Error>) -> Void) {
+        let queryItems: [URLQueryItem] = [
+            .init(name: "method", value: "flickr.photos.search"),
+            .init(name: "api_key", value: "a0881b1f9a81ce55eaa3257454f4a486"),
+            .init(name: "lat", value: String(lat)),
+            .init(name: "lon", value: String(lon)),
+            .init(name: "radius", value: "10"),
+            .init(name: "format", value: "json"),
+            .init(name: "nojsoncallback", value: "1")
+        ]
+        var urlComponents = URLComponents()
+        urlComponents.scheme = "https"
+        urlComponents.host = "www.flickr.com"
+        urlComponents.path = "/services/rest"
+        urlComponents.queryItems = queryItems
+        
+        urlSession.dataTask(with: urlComponents.url!) { (data, urlResponse, error) in
             if let error = error {
                 completion(.failure(error))
                 return
             }
             guard let data = data, data.count > 0 else {
-                completion(.failure(ResponseError.invalidSearchData))
+                completion(.failure(ResponseError.invalidPhotosSearchResponseData))
                 return
             }
             do {
@@ -42,10 +60,20 @@ struct APIClient {
         }.resume()
     }
     
-    func downloadPhoto(serverId: String, id: String, secret: String, completion: @escaping (Result<UIImage, Error>) -> Void) {
-        let urlString = "https://live.staticflickr.com/\(serverId)/\(id)_\(secret)_z.jpg"
-        let url = URL(string: urlString)!
-        urlSession.dataTask(with: url) { (data, urlResponse, error) in
+    /// For downloading an image from Flickr based on the  values from the photos search response `APIPhotosSearchResponse`
+    /// - Parameters:
+    ///   - serverId: The Flickr server ID
+    ///   - id: The ID of the photo
+    ///   - secret: The secret of the photo
+    ///   - photoSize: The photo size required, see `FlickrPhotoSize`
+    ///   - completion: `Result` object containing a `UIImage` if successful, otherwise an `Error` on failure
+    func downloadPhoto(serverId: String, id: String, secret: String, photoSize: FlickrPhotoSize, completion: @escaping (Result<UIImage, Error>) -> Void) {
+        var urlComponents = URLComponents()
+        urlComponents.scheme = "https"
+        urlComponents.host = "live.staticflickr.com"
+        urlComponents.path = "/\(serverId)/\(id)_\(secret)\(photoSize.rawValue).jpg"
+        
+        urlSession.dataTask(with: urlComponents.url!) { (data, urlResponse, error) in
             if let error = error {
                 completion(.failure(error))
                 return

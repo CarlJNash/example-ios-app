@@ -7,7 +7,7 @@
 
 import Foundation
 
-// Model that matched the flickr photos seatch response JSON
+// Model that matches the Flickr photos search response JSON
 struct APIPhotosSearchResponse: Decodable {
     struct Photo: Decodable {
         let id: String

@@ -71,20 +71,25 @@ extension PhotoListPresenter: CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let latestLocation = locations.last, didUpdateLocations.contains(latestLocation) == false else {
+        let latestLocation = locations.last! // This array will never be empty
+        
+        // Ignore multiple callbacks for the same location
+        guard didUpdateLocations.contains(where: { $0.coordinate == latestLocation.coordinate }) == false,
+              visitedLocations.contains(where: { $0.location.coordinate == latestLocation.coordinate }) == false else {
+            print("Ignoring duplicate location: \(latestLocation)")
             return
         }
+        
+        // Save the latest location so we know to ignore it if we see it again
         didUpdateLocations.append(latestLocation)
         
-        if visitedLocations.contains(where: { $0.location.coordinate == latestLocation.coordinate }) {
-            return
-        }
-        apiClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lng: latestLocation.coordinate.longitude) { result in
+        apiClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lon: latestLocation.coordinate.longitude) { result in
             switch result {
             case .failure(let error):
                 print(error)
+                // TODO: Display error
             case .success(let response):
-                // Find the first photo that isn't in the list if visitedLocations already - this may be for a location already in the list if the user has travelled back to the same location
+                // Find the first photo that isn't in the list of visitedLocations already - this may be for a location already in the list if the user has travelled back to the same location
                 guard let firstPhoto = response.photos.photo.first(where: { photo in
                     self.visitedLocations.contains(where: { visitedLocation in
                         photo.id == visitedLocation.image.imageId
@@ -94,15 +99,13 @@ extension PhotoListPresenter: CLLocationManagerDelegate {
                     return
                 }
                 // Download the photo
-                self.apiClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret) { result in
+                self.apiClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret, photoSize: .medium_640) { result in
                     switch result {
                     case .failure(let error):
                         print(error)
+                        // TODO: Display error
                     case .success(let image):
-                        if self.visitedLocations.contains(where: { $0.location.coordinate == latestLocation.coordinate }) {
-                            print("Location already exists in visited locations")
-                            return
-                        }
+                        // Add the visitedLocation to the beginning of the array and reload the collection view to display it
                         let visitedLocation = VisitedLocation(location: latestLocation, image: .init(imageId: firstPhoto.id, image: image))
                         self.visitedLocations.insert(visitedLocation, at: 0)
                         DispatchQueue.main.async {

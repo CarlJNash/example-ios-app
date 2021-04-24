@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C30E50472634BF040070A106 /* FlickrPhotoSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = C30E50462634BF040070A106 /* FlickrPhotoSize.swift */; };
 		C36614E52630B1450060889B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36614E42630B1450060889B /* AppDelegate.swift */; };
 		C36614E72630B1450060889B /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36614E62630B1450060889B /* SceneDelegate.swift */; };
 		C36614E92630B1450060889B /* PhotoListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36614E82630B1450060889B /* PhotoListViewController.swift */; };
@@ -41,6 +42,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C30E50462634BF040070A106 /* FlickrPhotoSize.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlickrPhotoSize.swift; sourceTree = "<group>"; };
 		C36614E12630B1450060889B /* Komoot Challenge Carl Nash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Komoot Challenge Carl Nash.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C36614E42630B1450060889B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C36614E62630B1450060889B /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
@@ -116,7 +118,6 @@
 				C3EB0699263229B100584AA9 /* Photo List Views */,
 				C3EB06892632283C00584AA9 /* Data Models */,
 				C3EB067D2632278500584AA9 /* Flickr API */,
-				C3EB06A2263229EB00584AA9 /* Location */,
 				C3EB06922632298400584AA9 /* Extensions */,
 				C36614EA2630B1450060889B /* Main.storyboard */,
 				C36614ED2630B1460060889B /* Assets.xcassets */,
@@ -147,6 +148,7 @@
 		C3EB067D2632278500584AA9 /* Flickr API */ = {
 			isa = PBXGroup;
 			children = (
+				C30E50462634BF040070A106 /* FlickrPhotoSize.swift */,
 				C3EB06752632274300584AA9 /* APIClient.swift */,
 				C3EB0681263227D200584AA9 /* APIPhotosSearchResponse.swift */,
 			);
@@ -177,13 +179,6 @@
 				C3EB066B263204FB00584AA9 /* PhotoCollectionViewCell.swift */,
 			);
 			path = "Photo List Views";
-			sourceTree = "<group>";
-		};
-		C3EB06A2263229EB00584AA9 /* Location */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Location;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -320,6 +315,7 @@
 				C3EB068B2632284B00584AA9 /* VisitedLocation.swift in Sources */,
 				C3EB0682263227D200584AA9 /* APIPhotosSearchResponse.swift in Sources */,
 				C3EB066C263204FB00584AA9 /* PhotoCollectionViewCell.swift in Sources */,
+				C30E50472634BF040070A106 /* FlickrPhotoSize.swift in Sources */,
 				C3EB06762632274300584AA9 /* APIClient.swift in Sources */,
 				C36614E52630B1450060889B /* AppDelegate.swift in Sources */,
 				C3EB06712632264A00584AA9 /* CLLocationCoordinate2D+extensions.swift in Sources */,

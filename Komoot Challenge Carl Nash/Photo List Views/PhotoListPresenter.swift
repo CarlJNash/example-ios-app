@@ -27,7 +27,7 @@ class PhotoListPresenter: NSObject {
     /// An array of locations that the user has visited and downloaded a photo for.
     var visitedLocations = [VisitedLocation]()
     
-    let locationManager = LocationManager()
+    let locationManager: LocationManaging
     
     var startButtonTitle: String {
         locationManager.isUpdatingLocation ? "Stop" : "Start"
@@ -35,8 +35,9 @@ class PhotoListPresenter: NSObject {
     
     // MARK: - Lifecycle
     
-    init(view: PhotoListView) {
+    init(view: PhotoListView, locationManager: LocationManaging) {
         self.view = view
+        self.locationManager = locationManager
     }
     
     // MARK: - Public Methods
@@ -77,7 +78,7 @@ class PhotoListPresenter: NSObject {
 
 private extension PhotoListPresenter {
     
-    func checkAuthorisationStatus(locationManager: LocationManager) {
+    func checkAuthorisationStatus(locationManager: LocationManaging) {
         guard CLLocationManager.locationServicesEnabled() else {
             view.showAlert(with: .init(title: "Location Error",
                                        message: "Location services are not enabled, please enable in iOS Settings and try again.",

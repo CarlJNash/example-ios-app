@@ -8,21 +8,28 @@
 import Foundation
 import CoreLocation
 
-/// A wrapper around `CLLocationManager` to provide blocks instead of delegate methods
-class LocationManager: NSObject {
-    
+protocol LocationManaging {
     typealias RequestAuthorizationCompletion = (() -> Void)
     typealias LocationUpdatedCallback = ((Result<CLLocation, Error>) -> Void)
     
-    var requestAuthorizationCompletion: RequestAuthorizationCompletion?
-    var locationUpdatedCallback: LocationUpdatedCallback?
+    var isUpdatingLocation: Bool { get }
+    var authorizationStatus: CLAuthorizationStatus { get }
+    func requestWhenInUseAuthorization(completion: @escaping RequestAuthorizationCompletion)
+    func startUpdatingLocation(callback: @escaping LocationUpdatedCallback)
+    func stopUpdatingLocation()
+    func reset()
+}
+
+/// A wrapper around `CLLocationManager` to provide blocks instead of delegate methods
+class LocationManager: NSObject, LocationManaging {
+    
+    private var requestAuthorizationCompletion: RequestAuthorizationCompletion?
+    private var locationUpdatedCallback: LocationUpdatedCallback?
     
     /// An array of locations that are received from the CLLocationManager. These are stored so that we know if a location has been processed already and we can ignore it.
-    var allLocations = [CLLocation]()
+    private var allLocations = [CLLocation]()
     
-    var isUpdatingLocation: Bool = false
-    
-    lazy var clLocationManager: CLLocationManager = {
+    private lazy var clLocationManager: CLLocationManager = {
         let locationManager = CLLocationManager()
         locationManager.delegate = self
         locationManager.distanceFilter = 100 // We only want location updates every 100 meters
@@ -30,6 +37,8 @@ class LocationManager: NSObject {
         locationManager.allowsBackgroundLocationUpdates = true
         return locationManager
     }()
+    
+    var isUpdatingLocation: Bool = false
     
     var authorizationStatus: CLAuthorizationStatus {
         clLocationManager.authorizationStatus

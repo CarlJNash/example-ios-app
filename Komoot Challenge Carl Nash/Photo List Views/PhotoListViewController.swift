@@ -14,7 +14,8 @@ class PhotoListViewController: UIViewController {
     @IBOutlet weak var collectionView: UICollectionView!
     
     lazy var presenter: PhotoListPresenter = {
-        PhotoListPresenter(view: self)
+        // This would normally be initialised by the coordinator - but keeping it simple for this demo
+        PhotoListPresenter(view: self, locationManager: LocationManager())
     }()
     
     override func viewDidLoad() {

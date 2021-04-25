@@ -38,7 +38,7 @@ class PhotoListViewController: UIViewController {
     
 }
 
-extension PhotoListViewController: PhotoListView {
+extension PhotoListViewController: PhotoListViewing {
     
     func reloadUI() {
         collectionView.reloadData()

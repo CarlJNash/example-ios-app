@@ -10,7 +10,7 @@ import CoreLocation
 import UIKit
 
 /// Protocol that the MVP View should conform to for the `PhotoListPresenter`
-protocol PhotoListView: AnyObject, AlertDisplayable {
+protocol PhotoListViewing: AnyObject, AlertDisplayable {
     func reloadUI()
 }
 
@@ -21,7 +21,7 @@ class PhotoListPresenter: NSObject {
     // MARK: - Properties
     
     // Reference to the MVP View (`unowned` as it should never be `nil` but we don't want to increase the reference counter for the view)
-    unowned let view: PhotoListView
+    unowned let view: PhotoListViewing
     
     let apiClient = FlickrAPIClient()
     /// An array of locations that the user has visited and downloaded a photo for.
@@ -35,7 +35,7 @@ class PhotoListPresenter: NSObject {
     
     // MARK: - Lifecycle
     
-    init(view: PhotoListView, locationManager: LocationManaging) {
+    init(view: PhotoListViewing, locationManager: LocationManaging) {
         self.view = view
         self.locationManager = locationManager
     }

@@ -17,7 +17,7 @@
 		C36614EC2630B1450060889B /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C36614EA2630B1450060889B /* Main.storyboard */; };
 		C36614EE2630B1460060889B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C36614ED2630B1460060889B /* Assets.xcassets */; };
 		C36614F12630B1460060889B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C36614EF2630B1460060889B /* LaunchScreen.storyboard */; };
-		C36614FC2630B1460060889B /* Komoot_Challenge_Carl_NashTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36614FB2630B1460060889B /* Komoot_Challenge_Carl_NashTests.swift */; };
+		C36614FC2630B1460060889B /* PhotoListPresenterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36614FB2630B1460060889B /* PhotoListPresenterTests.swift */; };
 		C36615072630B1460060889B /* Komoot_Challenge_Carl_NashUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36615062630B1460060889B /* Komoot_Challenge_Carl_NashUITests.swift */; };
 		C3EB066C263204FB00584AA9 /* PhotoCollectionViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3EB066B263204FB00584AA9 /* PhotoCollectionViewCell.swift */; };
 		C3EB06712632264A00584AA9 /* CLLocationCoordinate2D+extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3EB06702632264A00584AA9 /* CLLocationCoordinate2D+extensions.swift */; };
@@ -58,7 +58,7 @@
 		C36614F02630B1460060889B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		C36614F22630B1460060889B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C36614F72630B1460060889B /* Komoot Challenge Carl NashTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Komoot Challenge Carl NashTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		C36614FB2630B1460060889B /* Komoot_Challenge_Carl_NashTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Komoot_Challenge_Carl_NashTests.swift; sourceTree = "<group>"; };
+		C36614FB2630B1460060889B /* PhotoListPresenterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoListPresenterTests.swift; sourceTree = "<group>"; };
 		C36614FD2630B1460060889B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C36615022630B1460060889B /* Komoot Challenge Carl NashUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Komoot Challenge Carl NashUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C36615062630B1460060889B /* Komoot_Challenge_Carl_NashUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Komoot_Challenge_Carl_NashUITests.swift; sourceTree = "<group>"; };
@@ -155,7 +155,7 @@
 		C36614FA2630B1460060889B /* Komoot Challenge Carl NashTests */ = {
 			isa = PBXGroup;
 			children = (
-				C36614FB2630B1460060889B /* Komoot_Challenge_Carl_NashTests.swift */,
+				C36614FB2630B1460060889B /* PhotoListPresenterTests.swift */,
 				C36614FD2630B1460060889B /* Info.plist */,
 			);
 			path = "Komoot Challenge Carl NashTests";
@@ -356,7 +356,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C36614FC2630B1460060889B /* Komoot_Challenge_Carl_NashTests.swift in Sources */,
+				C36614FC2630B1460060889B /* PhotoListPresenterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

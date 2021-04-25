@@ -21,10 +21,6 @@ class PhotoListPresenterTests: XCTestCase {
         presenter = PhotoListPresenter(view: view, locationManager: locationManager)
     }
     
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-    
     func testPresenterStartButtonChecksAuthorizationStatus() throws {
         locationManager.isUpdatingLocation = false
         locationManager.authorizationStatus = .notDetermined
@@ -32,11 +28,12 @@ class PhotoListPresenterTests: XCTestCase {
         wait(for: [locationManager.requestAuthorizationExpectation], timeout: 0)
     }
     
-    func testPresenterStartButtonUpdatesLocation() throws {
+    func testPresenterStartButtonUpdatesLocationAndReloadsUI() throws {
         locationManager.isUpdatingLocation = false
         locationManager.authorizationStatus = .authorizedWhenInUse
         presenter.startButtonTapped()
-        wait(for: [locationManager.startUpdatingLocationExpectation], timeout: 0)
+        wait(for: [locationManager.startUpdatingLocationExpectation,
+                   view.reloadUIExpectation], timeout: 0)
     }
     
     func testPresenterStartButtonStopsUpdatingLocation() {
@@ -52,6 +49,22 @@ class PhotoListPresenterTests: XCTestCase {
         wait(for: [view.showAlertExpectation], timeout: 0)
         XCTAssertEqual(view.showAlertConfig?.title, "Current Trip")
         XCTAssertEqual(view.showAlertConfig?.buttons.count, 2)
+    }
+    
+    func testPresenterNumberOfItems() {
+        presenter.visitedLocations = [.mock()]
+        XCTAssertEqual(presenter.numberOfItems(), 1)
+        
+        presenter.visitedLocations = [.mock(), .mock()]
+        XCTAssertEqual(presenter.numberOfItems(), 2)
+    }
+    
+    func testStartButtonTitle() {
+        locationManager.isUpdatingLocation = false
+        XCTAssertEqual(presenter.startButtonTitle, "Start")
+        
+        locationManager.isUpdatingLocation = true
+        XCTAssertEqual(presenter.startButtonTitle, "Stop")
     }
     
 }
@@ -79,7 +92,7 @@ class MockPhotoListView: PhotoListViewing {
 
 class MockLocationManager: LocationManaging {
     var isUpdatingLocation: Bool = false
-    var authorizationStatus: CLAuthorizationStatus = .notDetermined
+    var authorizationStatus: CLAuthorizationStatus = .authorizedWhenInUse
     
     let requestAuthorizationExpectation = XCTestExpectation()
     func requestWhenInUseAuthorization(completion: @escaping RequestAuthorizationCompletion) {

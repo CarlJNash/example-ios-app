@@ -9,39 +9,45 @@ import Foundation
 import CoreLocation
 import UIKit
 
+/// Protocol that the MVP View should conform to for the `PhotoListPresenter`
+protocol PhotoListView: AnyObject, AlertDisplayable {
+    func reloadImageList()
+}
+
+/// This is the MVP Presenter for the `PhotoListView`.
+/// This presenter handles the Flickr API calls and location updates.
 class PhotoListPresenter: NSObject {
     
+    // MARK: - Properties
+    
+    // Reference to the MVP View (`unowned` as it should never be `nil` but we don't want to increase the reference counter for the view)
     unowned let view: PhotoListView
     
-    let apiClient = APIClient()
+    let apiClient = FlickrAPIClient()
+    /// An array of locations that are received from the CLLocationManager. These are stored so that we know if a location has been processed already and we can ignore it.
     var didUpdateLocations = [CLLocation]()
+    /// An array of locations that the user has visited and downloaded a photo for.
     var visitedLocations = [VisitedLocation]()
-    
-    init(view: PhotoListView) {
-        self.view = view
-    }
     
     lazy var locationManager: CLLocationManager = {
         let locationManager = CLLocationManager()
         locationManager.delegate = self
         locationManager.distanceFilter = 100 // We only want location updates every 100 meters
-        locationManager.activityType = .fitness // Apple recommend this for things like walking. This will also pause updates if the user doesn't move for some time.
+        locationManager.activityType = .fitness // Apple recommend this for activities such as walking. This will also pause updates if the user doesn't move for some time, saving the device battery.
         locationManager.allowsBackgroundLocationUpdates = true
         return locationManager
     }()
     
+    // MARK: - Lifecycle
+    
+    init(view: PhotoListView) {
+        self.view = view
+    }
+    
+    // MARK: - Public Methods
+    
     func startButtonTapped() {
-        switch locationManager.authorizationStatus {
-        case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
-        case .denied, .restricted:
-            // TODO: present alert to user
-            break
-        case .authorizedAlways, .authorizedWhenInUse:
-            locationManager.startUpdatingLocation()
-        @unknown default:
-            assertionFailure()
-        }
+        checkAuthorisationStatus(locationManager: locationManager)
     }
     
     func image(for indexPath: IndexPath) -> UIImage {
@@ -54,24 +60,46 @@ class PhotoListPresenter: NSObject {
     
 }
 
-extension PhotoListPresenter: CLLocationManagerDelegate {
-    
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        switch manager.authorizationStatus {
+private extension PhotoListPresenter {
+
+    func checkAuthorisationStatus(locationManager: CLLocationManager) {
+        guard CLLocationManager.locationServicesEnabled() else {
+            let alertConfig = AlertConfig(title: "Location Error",
+                                          message: "Location services are not enabled, please enable in iOS Settings and try again.",
+                                          buttons: [.defaultButton()])
+            view.showAlert(with: alertConfig)
+            return
+        }
+        
+        switch locationManager.authorizationStatus {
         case .notDetermined:
-            break // ignore
-        case .denied, .restricted:
-            // TODO: present alert to user
-            break
+            locationManager.requestWhenInUseAuthorization()
+        case .denied:
+            view.showAlert(with: .init(title: "Location Error",
+                                       message: "Location permission denied, please enable in iOS Settings.",
+                                       buttons: [.defaultButton()]))
+        case .restricted:
+            view.showAlert(with: .init(title: "Location Error",
+                                       message: "Location permission restricted.",
+                                       buttons: [.defaultButton()]))
         case .authorizedAlways, .authorizedWhenInUse:
             locationManager.startUpdatingLocation()
         @unknown default:
-            break
+            assertionFailure()
         }
+        
+    }
+    
+}
+
+extension PhotoListPresenter: CLLocationManagerDelegate {
+    
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        checkAuthorisationStatus(locationManager: manager)
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        let latestLocation = locations.last! // This array will never be empty
+        let latestLocation = locations.last! // Apple say this array will never be empty
         
         // Ignore multiple callbacks for the same location
         guard didUpdateLocations.contains(where: { $0.coordinate == latestLocation.coordinate }) == false,

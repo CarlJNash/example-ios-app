@@ -7,10 +7,8 @@
 
 import UIKit
 
-protocol PhotoListView: AnyObject {
-    func reloadImageList()
-}
-
+/// This is the view for allowing the user to start/stop their trip and for displaying a list of photos based on their route.
+/// As the user moves their GPS location is tracked, with updates every 100 metres. Once a new location is received the app calls the Flickr Photos Search API and passes in this location to search for photos taken within 5km. A photo is then downloaded and displayed in this view, with the latest image at the top of the list.
 class PhotoListViewController: UIViewController {
     
     @IBOutlet weak var collectionView: UICollectionView!

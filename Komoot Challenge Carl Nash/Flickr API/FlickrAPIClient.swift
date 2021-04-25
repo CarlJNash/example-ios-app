@@ -1,5 +1,5 @@
 //
-//  APIClient.swift
+//  FlickrAPIClient.swift
 //  Komoot Challenge Carl Nash
 //
 //  Created by Carl on 22/04/2021.
@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-struct APIClient {
+struct FlickrAPIClient {
     
     enum ResponseError: Error {
         case invalidPhotosSearchResponseData

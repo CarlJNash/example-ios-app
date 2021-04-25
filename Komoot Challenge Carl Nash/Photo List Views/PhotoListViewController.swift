@@ -27,17 +27,21 @@ class PhotoListViewController: UIViewController {
     }
     
     @objc private func startButtonTapped() {
-        let currentTitle = navigationItem.rightBarButtonItem!.title
-        navigationItem.rightBarButtonItem?.title = currentTitle == "Stop" ? "Start" : "Stop"
         presenter.startButtonTapped()
+        updateStartButtonTitle()
+    }
+    
+    func updateStartButtonTitle() {
+        navigationItem.rightBarButtonItem?.title = presenter.startButtonTitle
     }
     
 }
 
 extension PhotoListViewController: PhotoListView {
     
-    func reloadImageList() {
+    func reloadUI() {
         collectionView.reloadData()
+        updateStartButtonTitle()
     }
     
 }

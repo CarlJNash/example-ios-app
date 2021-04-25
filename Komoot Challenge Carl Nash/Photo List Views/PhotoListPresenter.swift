@@ -11,7 +11,7 @@ import UIKit
 
 /// Protocol that the MVP View should conform to for the `PhotoListPresenter`
 protocol PhotoListView: AnyObject, AlertDisplayable {
-    func reloadImageList()
+    func reloadUI()
 }
 
 /// This is the MVP Presenter for the `PhotoListView`.
@@ -24,19 +24,14 @@ class PhotoListPresenter: NSObject {
     unowned let view: PhotoListView
     
     let apiClient = FlickrAPIClient()
-    /// An array of locations that are received from the CLLocationManager. These are stored so that we know if a location has been processed already and we can ignore it.
-    var didUpdateLocations = [CLLocation]()
     /// An array of locations that the user has visited and downloaded a photo for.
     var visitedLocations = [VisitedLocation]()
     
-    lazy var locationManager: CLLocationManager = {
-        let locationManager = CLLocationManager()
-        locationManager.delegate = self
-        locationManager.distanceFilter = 100 // We only want location updates every 100 meters
-        locationManager.activityType = .fitness // Apple recommend this for activities such as walking. This will also pause updates if the user doesn't move for some time, saving the device battery.
-        locationManager.allowsBackgroundLocationUpdates = true
-        return locationManager
-    }()
+    let locationManager = LocationManager()
+    
+    var startButtonTitle: String {
+        locationManager.isUpdatingLocation ? "Stop" : "Start"
+    }
     
     // MARK: - Lifecycle
     
@@ -47,7 +42,27 @@ class PhotoListPresenter: NSObject {
     // MARK: - Public Methods
     
     func startButtonTapped() {
-        checkAuthorisationStatus(locationManager: locationManager)
+        if locationManager.isUpdatingLocation {
+            locationManager.stopUpdatingLocation()
+        } else {
+            if visitedLocations.count > 0 {
+                view.showAlert(with: .init(title: "Current Trip",
+                                           message: "Do you want to start a new trip or continue the current one? (Warning! starting a new trip will delete the current one!)",
+                                           buttons: [
+                                            .init(title: "Continue Trip", style: .default, handler: { _ in
+                                                self.checkAuthorisationStatus(locationManager: self.locationManager)
+                                            }),
+                                            .init(title: "Start New Trip", style: .destructive, handler: { _ in
+                                                self.visitedLocations = []
+                                                self.locationManager.reset()
+                                                self.view.reloadUI()
+                                                self.checkAuthorisationStatus(locationManager: self.locationManager)
+                                            })
+                                           ]))
+            } else {
+                checkAuthorisationStatus(locationManager: self.locationManager)
+            }
+        }
     }
     
     func image(for indexPath: IndexPath) -> UIImage {
@@ -61,87 +76,90 @@ class PhotoListPresenter: NSObject {
 }
 
 private extension PhotoListPresenter {
-
-    func checkAuthorisationStatus(locationManager: CLLocationManager) {
+    
+    func checkAuthorisationStatus(locationManager: LocationManager) {
         guard CLLocationManager.locationServicesEnabled() else {
-            let alertConfig = AlertConfig(title: "Location Error",
-                                          message: "Location services are not enabled, please enable in iOS Settings and try again.",
-                                          buttons: [.defaultButton()])
-            view.showAlert(with: alertConfig)
+            view.showAlert(with: .init(title: "Location Error",
+                                       message: "Location services are not enabled, please enable in iOS Settings and try again.",
+                                       buttons: [.openSettingsButton(), .cancelButton()]))
             return
         }
         
         switch locationManager.authorizationStatus {
         case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
+            locationManager.requestWhenInUseAuthorization(completion: { [weak self] in
+                self?.checkAuthorisationStatus(locationManager: locationManager)
+            })
         case .denied:
             view.showAlert(with: .init(title: "Location Error",
                                        message: "Location permission denied, please enable in iOS Settings.",
-                                       buttons: [.defaultButton()]))
+                                       buttons: [.openSettingsButton(), .cancelButton()]))
         case .restricted:
             view.showAlert(with: .init(title: "Location Error",
                                        message: "Location permission restricted.",
                                        buttons: [.defaultButton()]))
         case .authorizedAlways, .authorizedWhenInUse:
-            locationManager.startUpdatingLocation()
+            startUpdatingLocation()
+            view.reloadUI()
         @unknown default:
             assertionFailure()
         }
         
     }
     
-}
-
-extension PhotoListPresenter: CLLocationManagerDelegate {
-    
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        checkAuthorisationStatus(locationManager: manager)
-    }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        let latestLocation = locations.last! // Apple say this array will never be empty
-        
-        // Ignore multiple callbacks for the same location
-        guard didUpdateLocations.contains(where: { $0.coordinate == latestLocation.coordinate }) == false,
-              visitedLocations.contains(where: { $0.location.coordinate == latestLocation.coordinate }) == false else {
-            print("Ignoring duplicate location: \(latestLocation)")
-            return
-        }
-        
-        // Save the latest location so we know to ignore it if we see it again
-        didUpdateLocations.append(latestLocation)
-        
-        apiClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lon: latestLocation.coordinate.longitude) { result in
+    func startUpdatingLocation() {
+        locationManager.startUpdatingLocation(callback: { [weak self] result in
+            guard let self = self else { return }
+            
+            // Used for success result
+            let latestLocation: CLLocation
+            
             switch result {
             case .failure(let error):
-                print(error)
-                // TODO: Display error
-            case .success(let response):
-                // Find the first photo that isn't in the list of visitedLocations already - this may be for a location already in the list if the user has travelled back to the same location
-                guard let firstPhoto = response.photos.photo.first(where: { photo in
-                    self.visitedLocations.contains(where: { visitedLocation in
-                        photo.id == visitedLocation.image.imageId
-                    }) == false
-                }) else {
-                    print("Could not find photos for this location that aren't in the list already")
-                    return
-                }
-                // Download the photo
-                self.apiClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret, photoSize: .medium_640) { result in
-                    switch result {
-                    case .failure(let error):
-                        print(error)
-                        // TODO: Display error
-                    case .success(let image):
-                        // Add the visitedLocation to the beginning of the array and reload the collection view to display it
-                        let visitedLocation = VisitedLocation(location: latestLocation, image: .init(imageId: firstPhoto.id, image: image))
-                        self.visitedLocations.insert(visitedLocation, at: 0)
-                        DispatchQueue.main.async {
-                            self.view.reloadImageList()
+                self.view.showAlert(with: .init(title: "Location Error", message: error.localizedDescription, buttons: [.defaultButton()]))
+                return
+            case .success(let location):
+                latestLocation = location
+            }
+            
+            // Search for photos for this location
+            self.apiClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lon: latestLocation.coordinate.longitude) { [weak self] result in
+                guard let self = self else { return }
+                
+                switch result {
+                case .failure(let error):
+                    // In reality we should check what the error is before showing the user as we should only really show them errors they can do something about, e.g. offline
+                    self.view.showAlert(with: .init(title: "Error Fetching Photos", message: error.localizedDescription, buttons: [.defaultButton()]))
+                case .success(let response):
+                    // Find the first photo that isn't in the list of `visitedLocations` already - this may be for a location already in the list if the user has travelled back to the same location
+                    guard let firstPhoto = response.photos.photo.first(where: { photo in
+                        self.visitedLocations.contains(where: { visitedLocation in
+                            photo.id == visitedLocation.image.imageId
+                        }) == false
+                    }) else {
+                        print("Could not find photos for this location that aren't in the list already")
+                        return
+                    }
+                    
+                    // Download the photo
+                    self.apiClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret, photoSize: .medium_640) { [weak self] result in
+                        guard let self = self else { return }
+                        
+                        switch result {
+                        case .failure(let error):
+                            // In reality we should check what the error is before showing the user as we should only really show them errors they can do something about, e.g. offline
+                            self.view.showAlert(with: .init(title: "Error Downloading Photo", message: error.localizedDescription, buttons: [.defaultButton()]))
+                        case .success(let image):
+                            // Add the visitedLocation to the beginning of the array and reload the collection view to display it
+                            let visitedLocation = VisitedLocation(location: latestLocation, image: .init(imageId: firstPhoto.id, image: image))
+                            self.visitedLocations.insert(visitedLocation, at: 0)
+                            DispatchQueue.main.async {
+                                self.view.reloadUI()
+                            }
                         }
                     }
                 }
             }
-        }
+        })
     }
 }

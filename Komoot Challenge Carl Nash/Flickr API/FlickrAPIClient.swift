@@ -28,6 +28,8 @@ protocol APIClient {
     ///   - secret: The secret of the photo
     ///   - photoSize: The photo size required, see `FlickrPhotoSize`
     ///   - completion: `Result` object containing a `UIImage` if successful, otherwise an `Error` on failure
+    ///
+    /// - SeeAlso: https://www.flickr.com/services/api/misc.urls.html
     func downloadPhoto(serverId: String, id: String, secret: String, photoSize: FlickrPhotoSize, completion: @escaping (Result<UIImage, Error>) -> Void)
 }
 

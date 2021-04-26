@@ -77,4 +77,9 @@ extension PhotoListViewController: UICollectionViewDelegateFlowLayout {
         return newSize
     }
     
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        // TODO: Show hi-res image full screen
+        showAlert(with: .init(title: "Coming Soon!", message: "View photos in hi-resolution glory along with more info about the image", buttons: [.defaultButton()]))
+    }
+    
 }

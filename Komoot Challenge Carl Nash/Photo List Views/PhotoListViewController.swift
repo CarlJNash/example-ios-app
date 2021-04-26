@@ -15,7 +15,7 @@ class PhotoListViewController: UIViewController {
     
     lazy var presenter: PhotoListPresenter = {
         // This would normally be initialised by the coordinator - but keeping it simple for this demo
-        PhotoListPresenter(view: self, locationManager: LocationManager())
+        PhotoListPresenter(view: self, locationManager: LocationManager(), apiClient: FlickrAPIClient())
     }()
     
     override func viewDidLoad() {

@@ -23,7 +23,9 @@ class PhotoListPresenter: NSObject {
     // Reference to the MVP View (`unowned` as it should never be `nil` but we don't want to increase the reference counter for the view)
     unowned let view: PhotoListViewing
     
-    let apiClient = FlickrAPIClient()
+    let apiClient: APIClient
+    
+    // The next step would be to cache these locations on disk or on a server so they are persisted.
     /// An array of locations that the user has visited and downloaded a photo for.
     var visitedLocations = [VisitedLocation]()
     
@@ -35,9 +37,10 @@ class PhotoListPresenter: NSObject {
     
     // MARK: - Lifecycle
     
-    init(view: PhotoListViewing, locationManager: LocationManaging) {
+    init(view: PhotoListViewing, locationManager: LocationManaging, apiClient: APIClient) {
         self.view = view
         self.locationManager = locationManager
+        self.apiClient = apiClient
     }
     
     // MARK: - Public Methods

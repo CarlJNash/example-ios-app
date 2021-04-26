@@ -8,7 +8,12 @@
 import Foundation
 import UIKit
 
-struct FlickrAPIClient {
+protocol APIClient {
+    func searchForPhotosForLocation(lat: Double, lon: Double, completion: @escaping (Result<APIPhotosSearchResponse, Error>) -> Void)
+    func downloadPhoto(serverId: String, id: String, secret: String, photoSize: FlickrPhotoSize, completion: @escaping (Result<UIImage, Error>) -> Void)
+}
+
+struct FlickrAPIClient: APIClient {
     
     enum ResponseError: Error {
         case invalidPhotosSearchResponseData

@@ -16,12 +16,14 @@ protocol AlertDisplayable {
 extension AlertDisplayable {
     // Default implementation so that views don't need to implement unless they need want to do something different
     func showAlert(with config: AlertConfig) {
-        let alert = UIAlertController(title: config.title,
-                                      message: config.message,
-                                      preferredStyle: .alert)
-        for button in config.buttons {
-            alert.addAction(button)
+        DispatchQueue.main.async {
+            let alert = UIAlertController(title: config.title,
+                                          message: config.message,
+                                          preferredStyle: .alert)
+            for button in config.buttons {
+                alert.addAction(button)
+            }
+            present(alert, animated: true, completion: nil)
         }
-        present(alert, animated: true, completion: nil)
     }
 }

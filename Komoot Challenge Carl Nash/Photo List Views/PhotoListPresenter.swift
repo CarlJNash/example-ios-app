@@ -82,11 +82,13 @@ class PhotoListPresenter: NSObject {
 private extension PhotoListPresenter {
     
     func checkAuthorisationStatus(locationManager: LocationManaging) {
-        guard CLLocationManager.locationServicesEnabled() else {
-            view.showAlert(with: .init(title: "Location Error",
-                                       message: "Location services are not enabled, please enable in iOS Settings and try again.",
-                                       buttons: [.openSettingsButton(), .cancelButton()]))
-            return
+        DispatchQueue.global(qos: .background).async {
+            guard CLLocationManager.locationServicesEnabled() else {
+                self.view.showAlert(with: .init(title: "Location Error",
+                                           message: "Location services are not enabled, please enable in iOS Settings and try again.",
+                                           buttons: [.openSettingsButton(), .cancelButton()]))
+                return
+            }
         }
         
         switch locationManager.authorizationStatus {

@@ -161,7 +161,7 @@ class MockLocationManager: LocationManaging {
     }
 }
 
-class MockAPIClient: APIClient {
+class MockAPIClient: PhotosAPIClient {
     init(searchPhotosCompletionResult: Result<APIPhotosSearchResponse, Error>? = nil,
          downloadPhotosCompletionResult: Result<UIImage, Error>? = nil) {
         self.searchPhotosCompletionResult = searchPhotosCompletionResult

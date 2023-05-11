@@ -23,7 +23,7 @@ class PhotoListPresenter: NSObject {
     // Reference to the MVP View (`unowned` as it should never be `nil` but we don't want to increase the reference counter for the view)
     unowned let view: PhotoListViewing
     
-    let apiClient: APIClient
+    let photosAPIClient: PhotosAPIClient
     
     // The next step would be to cache these locations on disk or on a server so they are persisted.
     /// An array of locations that the user has visited and downloaded a photo for.
@@ -37,10 +37,10 @@ class PhotoListPresenter: NSObject {
     
     // MARK: - Lifecycle
     
-    init(view: PhotoListViewing, locationManager: LocationManaging, apiClient: APIClient) {
+    init(view: PhotoListViewing, locationManager: LocationManaging, apiClient: PhotosAPIClient) {
         self.view = view
         self.locationManager = locationManager
-        self.apiClient = apiClient
+        self.photosAPIClient = apiClient
     }
     
     // MARK: - Public Methods
@@ -129,7 +129,7 @@ private extension PhotoListPresenter {
             }
             
             // Search for photos for this location
-            self.apiClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lon: latestLocation.coordinate.longitude) { [weak self] result in
+            self.photosAPIClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lon: latestLocation.coordinate.longitude) { [weak self] result in
                 guard let self = self else { return }
                 
                 switch result {
@@ -148,7 +148,7 @@ private extension PhotoListPresenter {
                     }
                     
                     // Download the photo
-                    self.apiClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret, photoSize: .medium_640) { [weak self] result in
+                    self.photosAPIClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret, photoSize: .medium_640) { [weak self] result in
                         guard let self = self else { return }
                         
                         switch result {

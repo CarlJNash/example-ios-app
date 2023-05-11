@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-protocol APIClient {
+protocol PhotosAPIClient {
     /// Method for for searching for photos from the Flickr Photo Search API based on GPS coordinates.
     /// This response contains information such as the `imageId`, `server` and `secret` that are used for downloading the image.
     ///
@@ -33,7 +33,7 @@ protocol APIClient {
     func downloadPhoto(serverId: String, id: String, secret: String, photoSize: FlickrPhotoSize, completion: @escaping (Result<UIImage, Error>) -> Void)
 }
 
-struct FlickrAPIClient: APIClient {
+struct FlickrAPIClient: PhotosAPIClient {
     
     enum ResponseError: Error {
         case invalidPhotosSearchResponseData

@@ -49,6 +49,7 @@ struct FlickrAPIClient: PhotosAPIClient {
     func searchForPhotosForLocation(lat: Double, lon: Double, completion: @escaping (Result<APIPhotosSearchResponse, Error>) -> Void) {
         let queryItems: [URLQueryItem] = [
             .init(name: "method", value: "flickr.photos.search"),
+            // TODO: Move API key out of code
             .init(name: "api_key", value: "a0881b1f9a81ce55eaa3257454f4a486"),
             .init(name: "lat", value: String(lat)),
             .init(name: "lon", value: String(lon)),
@@ -57,7 +58,8 @@ struct FlickrAPIClient: PhotosAPIClient {
             .init(name: "content_type", value: "1"), // photos only
             .init(name: "privacy_filter", value: "1"), // public photos
             .init(name: "tags", value: "landscape, komoot"), // Try and get more relevant photos
-            .init(name: "geo_context", value: "2"), // outdoors
+            // TODO: Commented out as it seems to be returning no images now
+//            .init(name: "geo_context", value: "2"), // outdoors
             .init(name: "format", value: "json"),
             .init(name: "nojsoncallback", value: "1")
         ]
@@ -77,6 +79,9 @@ struct FlickrAPIClient: PhotosAPIClient {
                 return
             }
             do {
+                #if DEBUG
+                print(String(describing: String(data: data, encoding: .utf8)))
+                #endif
                 let decoded = try JSONDecoder().decode(APIPhotosSearchResponse.self, from: data)
                 completion(.success(decoded))
             } catch {

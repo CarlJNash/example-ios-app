@@ -58,8 +58,8 @@ extension PhotoListViewController: UICollectionViewDataSource {
             fatalError()
         }
         
-        let image = presenter.image(for: indexPath)
-        cell.configureWith(image: image)
+        let location = presenter.location(for: indexPath)
+        cell.configureWith(location)
         return cell
     }
     
@@ -69,10 +69,13 @@ extension PhotoListViewController: UICollectionViewDelegateFlowLayout {
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         // Calculate the cell size based on the image to display and the collection view width
-        let imageSize = presenter.visitedLocations[indexPath.item].image.image.size
+        let location = presenter.visitedLocations[indexPath.item]
+        let imageSize = location.image.size
         let imageAspectRatio = imageSize.width / imageSize.height
         let cellWidth = collectionView.contentSize.width
-        let cellHeight = cellWidth / imageAspectRatio
+        // TODO: Find a better way to do this.
+        let labelSize = UILabel.height(text: location.photo.title, constrainedTo: collectionView.frame.width)
+        let cellHeight = cellWidth / imageAspectRatio + labelSize.height + 10 // spacing
         let newSize = CGSize(width: cellWidth, height: cellHeight)
         return newSize
     }
@@ -82,4 +85,15 @@ extension PhotoListViewController: UICollectionViewDelegateFlowLayout {
         showAlert(with: .init(title: "Coming Soon!", message: "View photos in hi-resolution glory along with more info about the image", buttons: [.defaultButton()]))
     }
     
+}
+
+private extension UILabel {
+    // Calculate the height for a label given the text and width constraint.
+    static func height(text: String, constrainedTo width: CGFloat) -> CGSize {
+        let label = UILabel(frame: .init(origin: .zero, size: .init(width: width, height: 0)))
+        label.text = text
+        label.sizeToFit()
+        let labelSize = label.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        return labelSize
+    }
 }

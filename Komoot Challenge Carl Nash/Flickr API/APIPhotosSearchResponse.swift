@@ -13,6 +13,7 @@ struct APIPhotosSearchResponse: Decodable {
         let id: String
         let server: String
         let secret: String
+        let title: String
     }
     struct Photos: Decodable {
         let photo: [Photo]

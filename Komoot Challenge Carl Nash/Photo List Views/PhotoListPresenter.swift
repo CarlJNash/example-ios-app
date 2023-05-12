@@ -69,8 +69,8 @@ class PhotoListPresenter: NSObject {
         }
     }
     
-    func image(for indexPath: IndexPath) -> UIImage {
-        visitedLocations[indexPath.item].image.image
+    func location(for indexPath: IndexPath) -> VisitedLocation {
+        visitedLocations[indexPath.item]
     }
     
     func numberOfItems() -> Int {
@@ -140,7 +140,7 @@ private extension PhotoListPresenter {
                     // Find the first photo that isn't in the list of `visitedLocations` already - this may be for a location already in the list if the user has travelled back to the same location
                     guard let firstPhoto = response.photos.photo.first(where: { photo in
                         self.visitedLocations.contains(where: { visitedLocation in
-                            photo.id == visitedLocation.image.imageId
+                            photo.id == visitedLocation.photo.id
                         }) == false
                     }) else {
                         print("Could not find photos for this location that aren't in the list already")
@@ -157,7 +157,7 @@ private extension PhotoListPresenter {
                             self.view.showAlert(with: .init(title: "Error Downloading Photo", message: error.localizedDescription, buttons: [.defaultButton()]))
                         case .success(let image):
                             // Add the visitedLocation to the beginning of the array and reload the collection view to display it
-                            let visitedLocation = VisitedLocation(location: latestLocation, image: .init(imageId: firstPhoto.id, image: image))
+                            let visitedLocation = VisitedLocation(location: latestLocation, photo: firstPhoto, image: image)
                             self.visitedLocations.insert(visitedLocation, at: 0)
                             DispatchQueue.main.async {
                                 self.view.reloadUI()

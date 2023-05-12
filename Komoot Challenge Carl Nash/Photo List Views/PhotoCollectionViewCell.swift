@@ -10,9 +10,11 @@ import UIKit
 class PhotoCollectionViewCell: UICollectionViewCell {
     
     @IBOutlet weak var imageView: UIImageView!
-    
-    func configureWith(image: UIImage) {
-        imageView.image = image
+    @IBOutlet weak var titleLabel: UILabel!
+
+    func configureWith(_ location: VisitedLocation) {
+        imageView.image = location.image
+        titleLabel.text = location.photo.title
     }
     
 }

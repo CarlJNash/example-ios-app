@@ -94,8 +94,8 @@ extension LocationManager: CLLocationManagerDelegate {
         print(error)
         if case CLError.denied = error {
             stopUpdatingLocation()
+            locationUpdatedCallback?(.failure(error))
         }
-        locationUpdatedCallback?(.failure(error))
     }
     
 }

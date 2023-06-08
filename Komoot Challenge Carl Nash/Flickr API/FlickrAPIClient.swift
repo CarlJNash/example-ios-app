@@ -12,47 +12,30 @@ protocol PhotosAPIClient {
     /// Method for for searching for photos from the Flickr Photo Search API based on GPS coordinates.
     /// This response contains information such as the `imageId`, `server` and `secret` that are used for downloading the image.
     ///
-    /// - Parameters:
-    ///   - lat: The GPS latitude value.
-    ///   - lon: The GPS longitude value.
-    ///   - completion: `Result` object containing a `APIPhotosSearchResponse` if successful, otherwise an `Error` on failure.
-    ///
     /// - SeeAlso: https://www.flickr.com/services/api/flickr.photos.search.html
-    func searchForPhotosForLocation(lat: Double, lon: Double, completion: @escaping (Result<APIPhotosSearchResponse, Error>) -> Void)
-    
+    func searchForPhotosForLocation(_ location: Location) async throws -> APIPhotosSearchResponse
+
     /// Method for downloading an image from Flickr based on the  values from the photos search response. `APIPhotosSearchResponse`.
     ///
-    /// - Parameters:
-    ///   - serverId: The Flickr server ID
-    ///   - id: The ID of the photo
-    ///   - secret: The secret of the photo
-    ///   - photoSize: The photo size required, see `FlickrPhotoSize`
-    ///   - completion: `Result` object containing a `UIImage` if successful, otherwise an `Error` on failure
-    ///
-    /// - SeeAlso: https://www.flickr.com/services/api/misc.urls.html
-    func downloadPhoto(serverId: String, id: String, secret: String, photoSize: FlickrPhotoSize, completion: @escaping (Result<UIImage, Error>) -> Void)
+    /// - SeeAlso: https://www.flickr.com/services/api/misc.urls.html    
+    func downloadImage(for photo: APIPhotosSearchResponse.Photo, size: FlickrPhotoSize) async throws -> UIImage
 }
 
 struct FlickrAPIClient: PhotosAPIClient {
     
     enum ResponseError: Error {
-        case invalidPhotosSearchResponseData
         case invalidImageData
     }
     
-    let urlSession: URLSession
+    let urlSession: URLSession = .init(configuration: .default)
     
-    init() {
-        urlSession = URLSession(configuration: .default)
-    }
-    
-    func searchForPhotosForLocation(lat: Double, lon: Double, completion: @escaping (Result<APIPhotosSearchResponse, Error>) -> Void) {
+    func searchForPhotosForLocation(_ location: Location) async throws -> APIPhotosSearchResponse {
         let queryItems: [URLQueryItem] = [
             .init(name: "method", value: "flickr.photos.search"),
             // TODO: Move API key out of code
             .init(name: "api_key", value: "a0881b1f9a81ce55eaa3257454f4a486"),
-            .init(name: "lat", value: String(lat)),
-            .init(name: "lon", value: String(lon)),
+            .init(name: "lat", value: String(location.latitude)),
+            .init(name: "lon", value: String(location.longitude)),
             .init(name: "radius", value: "10"),
             .init(name: "safe_search", value: "1"), // safe
             .init(name: "content_type", value: "1"), // photos only
@@ -69,48 +52,32 @@ struct FlickrAPIClient: PhotosAPIClient {
         urlComponents.path = "/services/rest"
         urlComponents.queryItems = queryItems
         
-        urlSession.dataTask(with: urlComponents.url!) { (data, urlResponse, error) in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            guard let data = data, data.count > 0 else {
-                completion(.failure(ResponseError.invalidPhotosSearchResponseData))
-                return
-            }
-            do {
-                #if DEBUG
-                print(String(describing: String(data: data, encoding: .utf8)))
-                #endif
-                let decoded = try JSONDecoder().decode(APIPhotosSearchResponse.self, from: data)
-                completion(.success(decoded))
-            } catch {
-                completion(.failure(error))
-            }
-        }.resume()
+        guard let url = urlComponents.url else { fatalError() }
+        
+        let (data, _) = try await urlSession.data(from: url)
+        
+        #if DEBUG
+        print(String(describing: String(data: data, encoding: .utf8)))
+        #endif
+        
+        let decoded = try JSONDecoder().decode(APIPhotosSearchResponse.self, from: data)
+        return decoded
     }
     
-    func downloadPhoto(serverId: String, id: String, secret: String, photoSize: FlickrPhotoSize, completion: @escaping (Result<UIImage, Error>) -> Void) {
+    func downloadImage(for photo: APIPhotosSearchResponse.Photo, size: FlickrPhotoSize) async throws -> UIImage {
         var urlComponents = URLComponents()
         urlComponents.scheme = "https"
         urlComponents.host = "live.staticflickr.com"
-        urlComponents.path = "/\(serverId)/\(id)_\(secret)\(photoSize.rawValue).jpg"
-        
-        urlSession.dataTask(with: urlComponents.url!) { (data, urlResponse, error) in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            guard let data = data, data.count > 0 else {
-                completion(.failure(ResponseError.invalidImageData))
-                return
-            }
-            if let image = UIImage(data: data) {
-                completion(.success(image))
-            } else {
-                completion(.failure(ResponseError.invalidImageData))
-            }
-        }.resume()
+        urlComponents.path = "/\(photo.server)/\(photo.id)_\(photo.secret)\(size.rawValue).jpg"
+        guard let url = urlComponents.url else {
+            fatalError()
+        }
+        let (data, _) = try await urlSession.data(from: url)
+        if let image = UIImage(data: data) {
+            return image
+        } else {
+            throw ResponseError.invalidImageData
+        }
     }
     
 }

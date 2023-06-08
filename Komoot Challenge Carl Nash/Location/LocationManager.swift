@@ -8,10 +8,21 @@
 import Foundation
 import CoreLocation
 
+struct Location {
+    let latitude: Double
+    let longitude: Double
+    
+    init(_ location: CLLocation) {
+        latitude = location.coordinate.latitude
+        longitude = location.coordinate.longitude
+    }
+}
+
 protocol LocationManaging {
     typealias RequestAuthorizationCompletion = (() -> Void)
     typealias LocationUpdatedCallback = ((Result<CLLocation, Error>) -> Void)
     
+    var locationServicesEnabled: Bool { get async }
     var isUpdatingLocation: Bool { get }
     var authorizationStatus: CLAuthorizationStatus { get }
     func requestWhenInUseAuthorization(completion: @escaping RequestAuthorizationCompletion)
@@ -25,6 +36,16 @@ class LocationManager: NSObject, LocationManaging {
     
     private var requestAuthorizationCompletion: RequestAuthorizationCompletion?
     private var locationUpdatedCallback: LocationUpdatedCallback?
+    
+    var locationServicesEnabled: Bool {
+        get async {
+            return await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .background).async {
+                    continuation.resume(returning: CLLocationManager.locationServicesEnabled())
+                }
+            }
+        }
+    }
     
     /// An array of locations that are received from the CLLocationManager. These are stored so that we know if a location has been processed already and we can ignore it.
     private var allLocations = [CLLocation]()
@@ -75,7 +96,7 @@ extension LocationManager: CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        // Apple say this array will never be empty. We only care about returning the latest location in this case as it's the most recent.
+        // Apple say this array will never be empty. We only care about returning the last location in this case as it's the most recent.
         let latestLocation = locations.last!
         
         // Ignore multiple callbacks for the same location within x seconds

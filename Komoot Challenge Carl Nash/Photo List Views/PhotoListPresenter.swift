@@ -16,7 +16,7 @@ protocol PhotoListViewing: AnyObject, AlertDisplayable {
 
 /// This is the MVP Presenter for the `PhotoListView`.
 /// This presenter handles the Flickr API calls and location updates.
-class PhotoListPresenter: NSObject {
+@MainActor class PhotoListPresenter: NSObject {
     
     // MARK: - Properties
     
@@ -31,9 +31,7 @@ class PhotoListPresenter: NSObject {
     
     let locationManager: LocationManaging
     
-    var startButtonTitle: String {
-        locationManager.isUpdatingLocation ? "Stop" : "Start"
-    }
+    var startButtonTitle: String { locationManager.isUpdatingLocation ? "Stop" : "Start" }
     
     // MARK: - Lifecycle
     
@@ -46,27 +44,36 @@ class PhotoListPresenter: NSObject {
     // MARK: - Public Methods
     
     func startButtonTapped() {
+        // If we're already tracking a trip, then stop
         if locationManager.isUpdatingLocation {
             locationManager.stopUpdatingLocation()
-        } else {
-            if visitedLocations.count > 0 {
-                view.showAlert(with: .init(title: "Current Trip",
-                                           message: "Do you want to start a new trip or continue the current one? (Warning! starting a new trip will delete the current one!)",
-                                           buttons: [
-                                            .init(title: "Continue Trip", style: .default, handler: { _ in
-                                                self.checkAuthorisationStatus(locationManager: self.locationManager)
-                                            }),
-                                            .init(title: "Start New Trip", style: .destructive, handler: { _ in
-                                                self.visitedLocations = []
-                                                self.locationManager.reset()
-                                                self.view.reloadUI()
-                                                self.checkAuthorisationStatus(locationManager: self.locationManager)
-                                            })
-                                           ]))
-            } else {
-                checkAuthorisationStatus(locationManager: self.locationManager)
-            }
+            return
         }
+
+        // If we have no locations then check if we can start a new trip
+        if visitedLocations.count == 0 {
+            checkAuthorisationStatus(locationManager: locationManager)
+            return
+        }
+
+        // If we have locations, then check if the user wants to start a new trip
+        view.showAlert(
+            with: .init(
+                title: "Current Trip",
+                message: "Do you want to start a new trip or continue the current one? (Warning! starting a new trip will delete the current one!)",
+                buttons: [
+                    .init(title: "Continue Trip", style: .default, handler: { _ in
+                        self.checkAuthorisationStatus(locationManager: self.locationManager)
+                    }),
+                    .init(title: "Start New Trip", style: .destructive, handler: { _ in
+                        self.visitedLocations = []
+                        self.locationManager.reset()
+                        self.view.reloadUI()
+                        self.checkAuthorisationStatus(locationManager: self.locationManager)
+                    })
+                ]
+            )
+        )
     }
     
     func image(for indexPath: IndexPath) -> UIImage {
@@ -81,14 +88,16 @@ class PhotoListPresenter: NSObject {
 
 private extension PhotoListPresenter {
     
-    func checkAuthorisationStatus(locationManager: LocationManaging) {
-        DispatchQueue.global(qos: .background).async {
-            guard CLLocationManager.locationServicesEnabled() else {
-                self.view.showAlert(with: .init(title: "Location Error",
-                                           message: "Location services are not enabled, please enable in iOS Settings and try again.",
-                                           buttons: [.openSettingsButton(), .cancelButton()]))
-                return
-            }
+    func checkAuthorisationStatus(locationManager: LocationManaging) async {
+        guard await locationManager.locationServicesEnabled else {
+            self.view.showAlert(
+                with: .init(
+                    title: "Location Error",
+                    message: "Location services are not enabled, please enable in iOS Settings and try again.",
+                    buttons: [.openSettingsButton(), .cancelButton()]
+                )
+            )
+            return
         }
         
         switch locationManager.authorizationStatus {
@@ -115,57 +124,51 @@ private extension PhotoListPresenter {
     
     func startUpdatingLocation() {
         locationManager.startUpdatingLocation(callback: { [weak self] result in
-            guard let self = self else { return }
-            
-            // Used for success result
-            let latestLocation: CLLocation
-            
+            guard let self else { return }
             switch result {
             case .failure(let error):
                 self.view.showAlert(with: .init(title: "Location Error", message: error.localizedDescription, buttons: [.defaultButton()]))
-                return
             case .success(let location):
-                latestLocation = location
-            }
-            
-            // Search for photos for this location
-            self.photosAPIClient.searchForPhotosForLocation(lat: latestLocation.coordinate.latitude, lon: latestLocation.coordinate.longitude) { [weak self] result in
-                guard let self = self else { return }
-                
-                switch result {
-                case .failure(let error):
-                    // In reality we should check what the error is before showing the user as we should only really show them errors they can do something about, e.g. offline
-                    self.view.showAlert(with: .init(title: "Error Fetching Photos", message: error.localizedDescription, buttons: [.defaultButton()]))
-                case .success(let response):
-                    // Find the first photo that isn't in the list of `visitedLocations` already - this may be for a location already in the list if the user has travelled back to the same location
-                    guard let firstPhoto = response.photos.photo.first(where: { photo in
-                        self.visitedLocations.contains(where: { visitedLocation in
-                            photo.id == visitedLocation.image.imageId
-                        }) == false
-                    }) else {
-                        print("Could not find photos for this location that aren't in the list already")
-                        return
-                    }
-                    
-                    // Download the photo
-                    self.photosAPIClient.downloadPhoto(serverId: firstPhoto.server, id: firstPhoto.id, secret: firstPhoto.secret, photoSize: .medium_640) { [weak self] result in
-                        guard let self = self else { return }
-                        
-                        switch result {
-                        case .failure(let error):
-                            // In reality we should check what the error is before showing the user as we should only really show them errors they can do something about, e.g. offline
-                            self.view.showAlert(with: .init(title: "Error Downloading Photo", message: error.localizedDescription, buttons: [.defaultButton()]))
-                        case .success(let image):
-                            // Add the visitedLocation to the beginning of the array and reload the collection view to display it
-                            let visitedLocation = VisitedLocation(location: latestLocation, image: .init(imageId: firstPhoto.id, image: image))
-                            self.visitedLocations.insert(visitedLocation, at: 0)
-                            DispatchQueue.main.async {
-                                self.view.reloadUI()
-                            }
+                Task {
+                    do {
+                        let response = try await self.photosAPIClient.searchForPhotosForLocation(.init(location))
+                        await self.handle(response, for: location)
+                    } catch {
+                        DispatchQueue.main.async {
+                            self.view.showAlert(with: .init(title: "Error Fetching Photos", message: error.localizedDescription, buttons: [.defaultButton()]))
                         }
                     }
                 }
             }
         })
+    }
+                                              
+    func handle(_ response: APIPhotosSearchResponse, for location: CLLocation) async {
+        // Find the first photo that isn't in the list of `visitedLocations` already - this may be for a location already in the list if the user has travelled back to the same location
+        guard let firstPhoto = response.photos.photo.first(where: { photo in
+            self.visitedLocations.contains(where: { photo.id == $0.image.imageId }) == false
+        }) else {
+            print("Could not find photos for this location that aren't in the list already")
+            return
+        }
+        
+        do {
+            // Download the photo
+            let image = try await photosAPIClient.downloadImage(for: firstPhoto, size: .medium_640)
+            // Add the visitedLocation to the beginning of the array and reload the collection view to display it
+            let visitedLocation = VisitedLocation(
+                location: location,
+                image: .init(
+                    imageId: firstPhoto.id,
+                    image: image
+                )
+            )
+            visitedLocations.insert(visitedLocation, at: 0)
+            DispatchQueue.main.async {
+                self.view.reloadUI()
+            }
+        } catch {
+            view.showAlert(with: .init(title: "Error Downloading Photo", message: error.localizedDescription, buttons: [.defaultButton()]))
+        }
     }
 }
